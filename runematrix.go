@@ -42,9 +42,25 @@ func (m *RuneMatrix) HasFrameAt(x, y int) bool {
 	return r == '┼' || r == '│' || r == '─' || r == '┐' || r == '┘' || r == '└' || r == '┌' || r == '┬' || r == '┤' || r == '┴' || r == '├'
 }
 func (m *RuneMatrix) SmoothOpenCrossEnd(x, y int) bool {
-	if m.Get(x, y) == '┼' {
+	if m.HasFrameAt(x, y) {
 		// left right top down Nachbarn fehlt (bool) wenn leer
 		left, right, top, down := m.HasFrameAt(x-1, y), m.HasFrameAt(x+1, y), m.HasFrameAt(x, y-1), m.HasFrameAt(x, y+1)
+		if top == true && right == false && down == false && left == false {
+			m.Set(x, y, '│')
+			return true
+		}
+		if top == false && right == false && down == true && left == false {
+			m.Set(x, y, '│')
+			return true
+		}
+		if top == false && right == true && down == false && left == false {
+			m.Set(x, y, '─')
+			return true
+		}
+		if top == false && right == false && down == false && left == true {
+			m.Set(x, y, '─')
+			return true
+		}
 		if top == true && right == false && down == true && left == false {
 			m.Set(x, y, '│')
 			return true
@@ -85,6 +101,10 @@ func (m *RuneMatrix) SmoothOpenCrossEnd(x, y int) bool {
 			m.Set(x, y, '├')
 			return true
 		}
+		if top == true && right == true && down == true && left == true {
+			m.Set(x, y, '┼')
+			return true
+		}
 	}
 	return false
 }
@@ -115,25 +135,25 @@ func (m *RuneMatrix) Get(x, y int) rune {
 	return m.Runes[i]
 }
 func (m *RuneMatrix) HorizontalLineAt(y int) {
-	var r rune
+	// var r rune
 	for x := 0; x < m.w; x++ {
-		r = m.Get(x, y)
-		if r == ' ' {
-			m.Set(x, y, '─')
-		} else if r == '│' {
-			m.Set(x, y, '┼')
-		}
+		// r = m.Get(x, y)
+		// if r == ' ' {
+		m.Set(x, y, '─')
+		// } else if r == '│' {
+		// 	m.Set(x, y, '┼')
+		// }
 	}
 }
 func (m *RuneMatrix) VerticalLineAt(x int) {
-	var r rune
+	// var r rune
 	for y := 0; y < m.h; y++ {
-		r = m.Get(x, y)
-		if r == ' ' {
-			m.Set(x, y, '│')
-		} else if r == '─' {
-			m.Set(x, y, '┼')
-		}
+		// r = m.Get(x, y)
+		// if r == ' ' {
+		m.Set(x, y, '│')
+		// } else if r == '─' {
+		// 	m.Set(x, y, '┼')
+		// }
 	}
 }
 func WriteString(m *RuneMatrix, x, y int, s string) (int, int) {

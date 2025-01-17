@@ -12,32 +12,6 @@ func printInfos(t *texttable.Table) {
 	fmt.Printf("w/h of table: %d/%d\n", t.W(), t.H())
 }
 
-func main2() {
-
-	t := texttable.NewTable(3, 1)
-
-	t.Add("a1", "a2", "a3")
-	printInfos(t)
-
-	t.Add("bb1", "bb2", "bb3")
-	printInfos(t)
-
-	t.Add("ccc1", "ccc2", "ccc3")
-	printInfos(t)
-
-	// t.Add("cccc\n1")
-	// t.Add("dddd\n2")
-	// t.Add("eeee\n3")
-	// fmt.Printf("w/h of table: %d/%d\n", t.W(), t.H())
-
-	// t.Add(nil)
-	// t.Add("x")
-	// fmt.Printf("w/h of table: %d/%d\n", t.W(), t.H())
-
-	println()
-	t.Render()
-}
-
 func printColoredStacktrace(err interface{}) {
 	// Farbcodes definieren
 	redBold := color.New(color.FgRed, color.Bold).SprintFunc() // Rote, fette Schrift
@@ -66,5 +40,46 @@ func main() {
 	}()
 
 	// Hier wird ein Panic ausgelöst
-	main2()
+	run()
+}
+
+func run() {
+
+	t1 := texttable.NewTable(2, 4)
+
+	t1.Add("A1", "A2")
+	t1.AddSeparatorsTillEndOfRow()
+	t1.Add("b1", "b2")
+	t1.Add("c1", "c2")
+	t1.Add("d1", "d2")
+	println()
+	printInfos(t1)
+	t1.Render(true, false)
+
+	// t.AddSeparatorsTillEndOfRow()
+	// printInfos(t)
+
+	// t.Add("bb1", "bb2", "bb3")
+	// printInfos(t)
+
+	// t.Add("ccc1", "ccc2", "ccc3")
+	// t.AddSeparatorsTillEndOfRow()
+	// printInfos(t)
+
+	t2 := texttable.NewTable(3, 2)
+	t2.Add("a", "bbb", "c")
+	t2.AddSeparatorsTillEndOfRow()
+	t2.Add("ddd", "e", t1)
+
+	// println()
+	printInfos(t2)
+	t2.Render(true, true)
+
+	t3 := texttable.NewTable(3, 2)
+	t3.Add("Über1", "Über2", "Über3")
+	t3.AddSeparatorsTillEndOfRow()
+	t3.Add(t1, "Nix gewesen\naußer\nSpeesen!", true)
+	t3.AddSeparatorsTillEndOfRow()
+	t3.Add("leer", t1, t2)
+	t3.Render(true, true)
 }
