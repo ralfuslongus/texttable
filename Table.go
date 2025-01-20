@@ -119,11 +119,11 @@ func (t *Table) Add(vals ...interface{}) {
 	for _, val := range vals {
 		// Type Assertion
 		if cell, ok := val.(ICell); ok {
-			fmt.Println("val IS of type ICell")
+			// fmt.Println("val IS of type ICell")
 			// Zelle  so wie sie ist anhängen
 			t.append(cell)
 		} else {
-			fmt.Println("val is not of type ICell")
+			// fmt.Println("val is not of type ICell")
 			// Zelle  erzeugen und anhängen
 			cell := NewCell(val)
 			t.append(cell)
@@ -138,7 +138,7 @@ func (t *Table) append(cell ICell) {
 	// Zeilen- und Spaltennummern der neuen Zelle berechnen
 	rowNum := index / t.numberOfColums
 	colNum := index % t.numberOfColums
-	fmt.Printf("adding value to index %d at row/col %d/%d\n", index, rowNum, colNum)
+	// fmt.Printf("adding value to index %d at row/col %d/%d\n", index, rowNum, colNum)
 
 	// Maximalbreite der aktuellen Spalte updaten, Maxima wurden schon im Konstruktor angelegt weil Anzahl Spalten bekannt ist
 	w := cell.W()
@@ -147,7 +147,7 @@ func (t *Table) append(cell ICell) {
 	// Maximalhöhe der aktuellen Zeile updaten
 	h := cell.H()
 	if len(t.maxRowH) <= rowNum { // Zeile hat noch kein Maximum da startCapacityOfRows überschritten wurde, also anlegen, oder...
-		fmt.Printf("Neues Zeilenmaximum für Zeile %d anlegen\n", rowNum)
+		// fmt.Printf("Neues Zeilenmaximum für Zeile %d anlegen\n", rowNum)
 		t.maxRowH = append(t.maxRowH, h)
 	} else {
 		t.maxRowH[rowNum] = max(t.maxRowH[rowNum], h) // .. neues Maximum ermitteln und setzten
@@ -162,7 +162,7 @@ func (t *Table) RenderTo(f *os.File, smooth bool, withOuterFrame bool) {
 	var m RuneMatrix
 	if withOuterFrame {
 		m = NewRuneMatrix(t.W()+2, t.H()+2)
-		m.FillAll('.')
+		// m.FillAll('⋅')
 		m.HorizontalLineAt(0)
 		m.HorizontalLineAt(m.h - 1)
 		m.VerticalLineAt(0)
@@ -170,7 +170,7 @@ func (t *Table) RenderTo(f *os.File, smooth bool, withOuterFrame bool) {
 		t.RenderToMatrix(1, 1, t.W(), t.H(), &m)
 	} else {
 		m = NewRuneMatrix(t.W(), t.H())
-		m.FillAll('.')
+		// m.FillAll('⋅')
 		t.RenderToMatrix(0, 0, t.W(), t.H(), &m)
 
 	}
