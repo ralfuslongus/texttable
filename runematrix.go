@@ -10,7 +10,9 @@ type RuneMatrix struct {
 }
 
 func NewRuneMatrix(w, h int) RuneMatrix {
-	runes := make([]rune, (w+1)*h, (w+1)*h)
+	size := (w + 1) * h
+	println("making []rune with size", size)
+	runes := make([]rune, size, size)
 	m := RuneMatrix{w, h, runes}
 	m.Fill(0, 0, w, h, ' ') // Leerzeichen schreiben
 	// m.FillAll('.')           // Leerzeichen schreiben

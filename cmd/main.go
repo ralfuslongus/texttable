@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"texttable"
 
 	"github.com/fatih/color"
 	"github.com/go-stack/stack"
+	"github.com/ralfuslongus/texttable"
 )
 
 func printInfos(t *texttable.Table) {
@@ -29,18 +29,6 @@ func printColoredStacktrace(err interface{}) {
 		line := fmt.Sprintf("\tat %s:%d", stackCall.Frame().File, stackCall.Frame().Line)
 		fmt.Println(blue(line)) // Link in Blau ausgeben
 	}
-}
-
-func main() {
-	// Verwende defer und recover, um Panics abzufangen
-	defer func() {
-		if err := recover(); err != nil {
-			printColoredStacktrace(err)
-		}
-	}()
-
-	// Hier wird ein Panic ausgelöst
-	run()
 }
 
 func run() {
@@ -82,4 +70,18 @@ func run() {
 	t3.AddSeparatorsTillEndOfRow()
 	t3.Add("leer", t1, t2)
 	t3.Render(true, true)
+
+	x := make([]int, 10)[20]
+	println(x)
+}
+
+func main() {
+	// Verwende defer und recover, um Panics abzufangen
+	defer func() {
+		if err := recover(); err != nil {
+			printColoredStacktrace(err)
+		}
+	}()
+
+	run()
 }
