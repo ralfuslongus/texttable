@@ -1,3 +1,7 @@
+!!!!!!! WARNING !!!!!!!
+PRE-PRE-ALPHA-VERSION
+DO NOT USE, JUST FOR TESTING AND GET USED TO GO AND GITHUB
+
 # texttable
 Texttable lets you create simple tables with unicode-separators like this:
 ```
