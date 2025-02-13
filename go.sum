@@ -1,3 +1,5 @@
+github.com/dottedmag/xd v0.0.0-20230403123119-70d1aac85eff h1:9e5ApsEDdTubjQ3ZRl8Yq0QGoj5FN8RdTIIuovd8PUw=
+github.com/dottedmag/xd v0.0.0-20230403123119-70d1aac85eff/go.mod h1:7uOuZ+MegHtHVQ1c3MN06Rhh+RU16kvmOWqbxbKlh/g=
 github.com/fatih/color v1.6.0 h1:66qjqZk8kalYAvDRtM1AdAJQI0tj4Wrue3Eq3B3pmFU=
 github.com/fatih/color v1.6.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/go-stack/stack v1.8.1 h1:ntEHSVwIt7PNXNpgPmVfMrNhLtgjlmnZha2kOpuRiDw=

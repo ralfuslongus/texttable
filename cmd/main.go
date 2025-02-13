@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/go-stack/stack"
-	"github.com/ralfuslongus/texttable"
+	. "github.com/ralfuslongus/texttable"
 )
 
-func printInfos(t *texttable.Table) {
+func printInfos(t *Table) {
 	fmt.Printf("w/h of table: %d/%d\n", t.W(), t.H())
 }
 
@@ -33,46 +34,46 @@ func printColoredStacktrace(err interface{}) {
 
 func run() {
 
-	t1 := texttable.NewTable(2, 4)
+	// t1 := texttable.NewTable(2, 4)
 
-	t1.Add("A1", "A2")
-	t1.AddSeparatorsTillEndOfRow()
-	t1.Add("b1", "b2")
-	t1.Add("c1", "c2")
-	t1.Add("d1", "d2")
-	println()
-	printInfos(t1)
-	t1.Render(true, false)
-
-	// t.AddSeparatorsTillEndOfRow()
-	// printInfos(t)
-
-	// t.Add("bb1", "bb2", "bb3")
-	// printInfos(t)
-
-	// t.Add("ccc1", "ccc2", "ccc3")
-	// t.AddSeparatorsTillEndOfRow()
-	// printInfos(t)
-
-	t2 := texttable.NewTable(3, 2)
-	t2.Add("a", "bbb", "c")
-	t2.AddSeparatorsTillEndOfRow()
-	t2.Add("ddd", "e", t1)
-
+	// t1.Add("A1", "A2")
+	// t1.AddSeparatorsTillEndOfRow()
+	// t1.Add("b1", "b2")
+	// t1.Add("c1", "c2")
+	// t1.Add("d1", "d2")
 	// println()
-	printInfos(t2)
-	t2.Render(true, true)
+	// printInfos(t1)
+	// t1.Render(true, false)
 
-	t3 := texttable.NewTable(3, 2)
-	t3.Add("Über1", "Über2", "Über3")
-	t3.AddSeparatorsTillEndOfRow()
-	t3.Add(t1, "Nix gewesen\naußer\nSpeesen!", true)
-	t3.AddSeparatorsTillEndOfRow()
-	t3.Add("leer", t1, t2)
-	t3.Render(true, true)
+	// t2 := texttable.NewTable(3, 2)
+	// t2.Add("a", "bbb", "c")
+	// t2.AddSeparatorsTillEndOfRow()
+	// t2.Add("ddd", "e", t1)
 
-	x := make([]int, 10)[20]
-	println(x)
+	// printInfos(t2)
+	// t2.Render(true, true)
+
+	// t3 := texttable.NewTable(3, 2)
+	// t3.Add("Über1", "Über2", "Preis")
+	// t3.AddSeparatorsTillEndOfRow()
+	// t3.Add("midA")
+	// t3.Add("midB")
+	// t3.Add(3)
+	// t3.Add("midA")
+	// t3.Add("midB", 4)
+	// t3.Add("midA", "midB", 5)
+	// t3.AddSeparatorsTillEndOfRow()
+	// t3.Add("Unter1", "GESAMTPREIS:", 3+4+5)
+	// t3.Render(true, true)
+
+	t4 := NewTable(3, 2)
+
+	t4.Add("LEFT", "CENTER", NewCell("RIGHT").WithAlignment(RIGHT))
+	t4.Add(NewCell(1).WithAlignment(LEFT))
+	t4.Add(NewCell(true).WithAlignment(LEFT))
+	t4.Add(NewCell(2).WithAlignment(LEFT))
+	t4.Add(NewCell("a").WithAlignment(RIGHT), NewCell("b").WithAlignment(CENTER), "c")
+	t4.Render(true, true)
 }
 
 func main() {
@@ -83,5 +84,8 @@ func main() {
 		}
 	}()
 
-	run()
+	for i := 0; i < 1; i++ {
+		run()
+		time.Sleep(100 * time.Millisecond)
+	}
 }
