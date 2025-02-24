@@ -34,46 +34,6 @@ func printColoredStacktrace(err interface{}) {
 
 func run() {
 
-	// t1 := texttable.NewTable(2, 4)
-
-	// t1.Add("A1", "A2")
-	// t1.AddSeparatorsTillEndOfRow()
-	// t1.Add("b1", "b2")
-	// t1.Add("c1", "c2")
-	// t1.Add("d1", "d2")
-	// println()
-	// printInfos(t1)
-	// t1.Render(true, false)
-
-	// t2 := texttable.NewTable(3, 2)
-	// t2.Add("a", "bbb", "c")
-	// t2.AddSeparatorsTillEndOfRow()
-	// t2.Add("ddd", "e", t1)
-
-	// printInfos(t2)
-	// t2.Render(true, true)
-
-	// t3 := texttable.NewTable(3, 2)
-	// t3.Add("Über1", "Über2", "Preis")
-	// t3.AddSeparatorsTillEndOfRow()
-	// t3.Add("midA")
-	// t3.Add("midB")
-	// t3.Add(3)
-	// t3.Add("midA")
-	// t3.Add("midB", 4)
-	// t3.Add("midA", "midB", 5)
-	// t3.AddSeparatorsTillEndOfRow()
-	// t3.Add("Unter1", "GESAMTPREIS:", 3+4+5)
-	// t3.Render(true, true)
-
-	t4 := NewTable(3, 2)
-
-	t4.Add("LEFT", "CENTER", NewCell("RIGHT").WithAlignment(RIGHT))
-	t4.Add(NewCell(1).WithAlignment(LEFT))
-	t4.Add(NewCell(true).WithAlignment(LEFT))
-	t4.Add(NewCell(2).WithAlignment(LEFT))
-	t4.Add(NewCell("a").WithAlignment(RIGHT), NewCell("b").WithAlignment(CENTER), "c")
-	t4.Render(true, true)
 }
 
 func main() {

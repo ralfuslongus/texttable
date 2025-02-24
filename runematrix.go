@@ -1,7 +1,7 @@
 package texttable
 
 import (
-	"os"
+	"strings"
 )
 
 type RuneMatrix struct {
@@ -10,8 +10,8 @@ type RuneMatrix struct {
 }
 
 func NewRuneMatrix(w, h int) RuneMatrix {
-	size := (w + 1) * h
-	println("making []rune with size", size)
+	size := w * h
+	// fmt.Printf("making []rune with size %d*%d=%d", w, h, size)
 	runes := make([]rune, size, size)
 	m := RuneMatrix{w, h, runes}
 	m.Fill(0, 0, w, h, ' ') // Leerzeichen schreiben
@@ -181,15 +181,29 @@ func WriteString(m *RuneMatrix, x, y int, s string) (int, int) {
 	return width, height
 }
 
-func (m *RuneMatrix) Render() {
-	m.RenderTo(os.Stdout)
+func (m *RuneMatrix) String() string {
+	sb := strings.Builder{}
+	m.RenderTo(&sb)
+	return sb.String()
 }
-func (m *RuneMatrix) RenderTo(f *os.File) {
-	for i, r := range m.Runes {
-		f.WriteString(string(r))
-		if (i+1)%m.w == 0 {
-			f.WriteString("↵\n")
-			// f.WriteString("\n")
+
+func (m *RuneMatrix) RenderTo(f *strings.Builder) {
+	// for i, r := range m.Runes {
+	// 	f.WriteString(string(r))
+	// 	if i < (len(m.Runes)-2) && (i+1)%m.w == 0 {
+	// 		f.WriteString("↵\n")
+	// 		// f.WriteString("\n")
+	// 	}
+	// }
+	i := 0
+	for y := 0; y < m.h; y++ {
+		for x := 0; x < m.w; x++ {
+			f.WriteRune(m.Runes[i])
+			i++
+		}
+		if i < len(m.Runes)-2 {
+			f.WriteRune('\n')
 		}
 	}
+
 }

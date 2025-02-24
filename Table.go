@@ -1,121 +1,11 @@
 package texttable
 
 import (
-	"os"
 	"strings"
 )
 
-type ICell interface {
-	W() int
-	H() int
-	RenderToMatrix(x int, y int, w int, h int, m *RuneMatrix)
-}
-
-// ---------------------------------------------------------
-type Separator rune
-
-func NewSeparator(r rune) Separator {
-	sep := Separator(r)
-	return sep
-}
-func (sep Separator) W() int {
-	return 0
-}
-func (sep Separator) H() int {
-	return 1
-}
-func (sep Separator) RenderToMatrix(x int, y int, w int, h int, m *RuneMatrix) {
-	for dx := 0; dx < w; dx++ {
-		for dy := 0; dy < h; dy++ {
-			m.Set(x+dx, y+dy, rune(sep))
-		}
-	}
-}
-
-// ---------------------------------------------------------
-type Alignment int
-
-const (
-	LEFT Alignment = iota
-	CENTER
-	RIGHT
-)
-
-type Cell struct {
-	lines           [][]rune
-	maxWidthOfLines int
-	alignment       Alignment
-}
-
-func NewCell(v interface{}) *Cell {
-
-	switch val := v.(type) {
-	case *Cell:
-		// Zelle so wie sie ist anhängen
-		return val
-	case string:
-		// Zelle mit gegebenem string erzeugen und anhängen
-		return newCellFromString(val).WithAlignment(LEFT)
-	case bool:
-		// Zelle mit geSprintetem val erzeugen und anhängen
-		return newCellFromString(BoolToString(val)).WithAlignment(RIGHT)
-	case int:
-		// Zelle mit geSprintetem val erzeugen und anhängen
-		return newCellFromString(IntToString(val)).WithAlignment(RIGHT)
-	case float64:
-		// Zelle mit geSprintetem val erzeugen und anhängen
-		return newCellFromString(FloatToString(val)).WithAlignment(RIGHT)
-	default:
-		// Zelle mit geSprintetem val erzeugen und anhängen
-		return newCellFromString("!unsupported type!").WithAlignment(CENTER)
-	}
-}
-
-func newCellFromString(multiLine string) *Cell {
-	// multiLine := val //fmt.Sprintf("%v", val)
-	parts := strings.Split(multiLine, "\n")
-	lines := make([][]rune, len(parts))
-	maxWidthOfLines := 0
-	for i, part := range parts {
-		line := []rune(part)
-		lines[i] = line
-		maxWidthOfLines = max(maxWidthOfLines, len(line))
-	}
-	cell := Cell{lines, maxWidthOfLines, 0}
-	return &cell
-}
-
-func (cell *Cell) WithAlignment(alignment Alignment) *Cell {
-	cell.alignment = alignment
-	return cell
-}
-func (cell *Cell) W() int {
-	return cell.maxWidthOfLines
-}
-func (cell *Cell) H() int {
-	return len(cell.lines)
-}
-func (cell *Cell) RenderToMatrix(x int, y int, w int, h int, m *RuneMatrix) {
-	for i, line := range cell.lines {
-		var xOffset int
-		switch cell.alignment {
-		case LEFT:
-			xOffset = 0
-		case CENTER:
-			xOffset = (w - cell.W()) / 2
-		case RIGHT:
-			xOffset = w - cell.W()
-		}
-
-		for j, r := range line {
-			m.Set(x+xOffset+j, y+i, r)
-		}
-	}
-}
-
-// ---------------------------------------------------------
 type Table struct {
-	cells          []ICell // alle Zellen in einem slice, wächst mit jedem Add
+	cells          []*Cell // alle Zellen in einem slice, wächst mit jedem Add
 	numberOfColums int     // die fixe Anzahl an Spalten
 	maxColW        []int   // die Maximalbreiten aller Spalten, wird bei jedem Add aktualisiert
 	maxRowH        []int   // die Maximalhöhen aller Zeilen, wird bei jedem Add aktualisiert
@@ -123,7 +13,7 @@ type Table struct {
 
 func NewTable(numberOfColums, startCapacityOfRows int) *Table {
 	n := numberOfColums * startCapacityOfRows
-	cells := make([]ICell, 0, n)
+	cells := make([]*Cell, 0, n)
 	maxColW := make([]int, numberOfColums)
 	maxRowH := make([]int, startCapacityOfRows)
 	t := Table{cells: cells, numberOfColums: numberOfColums, maxColW: maxColW, maxRowH: maxRowH}
@@ -153,14 +43,12 @@ func (t *Table) AddSeparatorsTillEndOfRow() {
 }
 func (t *Table) AddSeparator() {
 	// Separator erzeugen und anhängen
-	sep := NewSeparator('┼')
+	sep := NewCell(nil).AsSeparator()
 	t.append(sep)
 }
-
 func (t *Table) Add(vals ...interface{}) {
 	for _, v := range vals {
 		t.append(NewCell(v))
-
 	}
 }
 func BoolToString(b bool) string {
@@ -201,46 +89,7 @@ func IntToString(num int) string {
 
 	return string(digits)
 }
-func FloatToString(num float64) string {
-	if num == 0 {
-		return "0"
-	}
-
-	// Bestimme das Vorzeichen
-	isNegative := num < 0
-	if isNegative {
-		num = -num
-	}
-
-	// Teile die Zahl in Ganzzahl- und Dezimalteil
-	integerPart := int(num)
-	decimalPart := num - float64(integerPart)
-
-	// Umwandlung des Ganzzahlteils in einen String
-	intStr := IntToString(integerPart)
-
-	// Umwandlung des Dezimalteils in einen String
-	decimalStr := ""
-	if decimalPart > 0 {
-		decimalStr = "."
-		for i := 0; i < 6; i++ { // Maximal 6 Dezimalstellen
-			decimalPart *= 10
-			digit := int(decimalPart)
-			decimalStr += string('0' + digit)
-			decimalPart -= float64(digit)
-			if decimalPart == 0 {
-				break
-			}
-		}
-	}
-
-	// Kombiniere Ganzzahl- und Dezimalteil
-	if isNegative {
-		return "-" + intStr + decimalStr
-	}
-	return intStr + decimalStr
-}
-func (t *Table) append(cell ICell) {
+func (t *Table) append(cell *Cell) {
 	// ...Zelle anhängen
 	index := len(t.cells)
 	t.cells = append(t.cells, cell)
@@ -262,11 +111,9 @@ func (t *Table) append(cell ICell) {
 	} else {
 		t.maxRowH[rowNum] = max(t.maxRowH[rowNum], h) // .. neues Maximum ermitteln und setzten
 	}
+	// fmt.Printf("w/h of cell %v = %d/%d\n", cell.String(), cell.W(), cell.H())
 }
-func (t *Table) Render(smooth bool, withOuterFrame bool) {
-	t.RenderTo(os.Stdout, smooth, withOuterFrame)
-}
-func (t *Table) RenderTo(f *os.File, smooth bool, withOuterFrame bool) {
+func (t *Table) RenderTo(f *strings.Builder, smooth bool, withOuterFrame bool) {
 	var m RuneMatrix
 	if withOuterFrame {
 		m = NewRuneMatrix(t.W()+2, t.H()+2)
@@ -312,4 +159,14 @@ func (t *Table) RenderToMatrix(x int, y int, w int, h int, m *RuneMatrix) {
 		dy += maxH
 		rowNum++
 	}
+}
+func (t *Table) String() string {
+	return t.ToString(true)
+
+}
+func (t *Table) ToString(withOuterFrame bool) string {
+	sb := strings.Builder{}
+	t.RenderTo(&sb, true, withOuterFrame)
+	return sb.String()
+
 }
