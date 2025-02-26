@@ -96,7 +96,6 @@ func (cell *Cell) RenderToMatrix(x int, y int, w int, h int, m *RuneMatrix) {
 func (cell *Cell) String() string {
 	m := NewRuneMatrix(cell.W(), cell.H())
 	// m.FillAll('⋅')
-	cell.RenderToMatrix(0, 0, cell.W(), cell.H(), &m)
-
+	cell.RenderToMatrix(0, 0, cell.W(), cell.H(), m)
 	return m.String()
 }

@@ -18,9 +18,7 @@ func TestMultiLineCell(t *testing.T) {
 	result := multiLineCell.String()
 	expected := "Line1\nLine2"
 
-	if result != expected {
-		t.Errorf("Expected %v, but got %v", expected, result)
-	}
+	AssertEqual(t, result, expected)
 }
 
 func TestManualRuneMatrix(t *testing.T) {
@@ -35,9 +33,7 @@ func TestManualRuneMatrix(t *testing.T) {
 	result := m.String()
 	expected := "abc\nABC"
 
-	if result != expected {
-		t.Errorf("Expected %v%v%v, but got %v", Red, expected, Reset, result)
-	}
+	AssertEqual(t, result, expected)
 }
 
 func TestSimpleTableWithoutOuterFrame(t *testing.T) {
@@ -48,9 +44,7 @@ func TestSimpleTableWithoutOuterFrame(t *testing.T) {
 	result := t1.ToString(false)
 	expected := "v1│v2\nv3│v4"
 
-	if result != expected {
-		t.Errorf("Expected '%v', but got '%v'", expected, result)
-	}
+	AssertEqual(t, result, expected)
 }
 
 func TestSimpleTableWithHeaderSeparatorAndOuterFrame(t *testing.T) {
@@ -67,10 +61,7 @@ func TestSimpleTableWithHeaderSeparatorAndOuterFrame(t *testing.T) {
 b1│b2
 c1│c2
 d1│d2`
-
-	if result != expected {
-		t.Errorf("Expected:\n'%v'\n, but got:\n'%v'\n", expected, result)
-	}
+	AssertEqual(t, result, expected)
 }
 func TestNestedTables(t *testing.T) {
 	// Ein einfacher Table ohne Rand, mit Header-Separatoren
@@ -92,9 +83,7 @@ func TestNestedTables(t *testing.T) {
 │ │c│d│
 └─┴─┴─┘`
 
-	if result != expected {
-		t.Errorf("Expected:\n'%v'\n, but got:\n'%v'\n", expected, result)
-	}
+	AssertEqual(t, result, expected)
 }
 func TestTableWithHeaderAndFooterSeparator(t *testing.T) {
 	// Ein einfacher Table mit Rand, Header- und Footer-Separatoren
@@ -120,9 +109,7 @@ func TestTableWithHeaderAndFooterSeparator(t *testing.T) {
 │Unter1│GESAMTPREIS:│   12│
 └──────┴────────────┴─────┘`
 
-	if result != expected {
-		t.Errorf("Expected:\n'%v'\n, but got:\n'%v'\n", expected, result)
-	}
+	AssertEqual(t, result, expected)
 }
 func TestTableWithManualAlignmentsAndMaxWidth(t *testing.T) {
 	t4 := NewTable(3, 2)
@@ -164,7 +151,30 @@ func TestTableWithManualAlignmentsAndMaxWidth(t *testing.T) {
 │Nr 1                │        Nr 2        │                Nr 3│
 └────────────────────┴────────────────────┴────────────────────┘`
 
-	if result != expected {
-		t.Errorf("Expected:\n'%v'\n, but got:\n'%v'\n", expected, result)
-	}
+	AssertEqual(t, result, expected)
+}
+func TestGrowingTable(t *testing.T) {
+	t5 := NewTable(2, 2)
+	t5.Add("a")
+	t5.Add("b")
+	t5.Add("c")
+	t5.Add("d")
+
+	AssertEqual(t, t5.ToString(false), "a│b\nc│d")
+	t5.Add("e")
+	t5.Add("f")
+	t5.Add("g")
+	t5.Add("h")
+	AssertEqual(t, t5.ToString(false), "a│b\nc│d\ne│f\ng│h")
+}
+func TestModdingTable(t *testing.T) {
+	t5 := NewTable(2, 2)
+	t5.Add("a")
+	t5.Add("b")
+	t5.Add("c")
+	t5.Add("d")
+
+	AssertEqual(t, t5.ToString(false), "a│b\nc│d")
+	t5.Set(0, 0, "AAAA")
+	AssertEqual(t, t5.ToString(false), "AAAA│b\nc   │d")
 }

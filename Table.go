@@ -9,6 +9,7 @@ type Table struct {
 	numberOfColums int     // die fixe Anzahl an Spalten
 	maxColW        []int   // die Maximalbreiten aller Spalten, wird bei jedem Add aktualisiert
 	maxRowH        []int   // die Maximalhöhen aller Zeilen, wird bei jedem Add aktualisiert
+	m              *RuneMatrix
 }
 
 func NewTable(numberOfColums, startCapacityOfRows int) *Table {
@@ -51,6 +52,11 @@ func (t *Table) Add(vals ...interface{}) {
 		t.append(NewCell(v))
 	}
 }
+func (t *Table) Set(x, y int, v interface{}) {
+	i := x + (y * t.numberOfColums)
+	t.cells[i] = NewCell(v)
+}
+
 func BoolToString(b bool) string {
 	if b {
 		return "true"
@@ -113,26 +119,33 @@ func (t *Table) append(cell *Cell) {
 	}
 	// fmt.Printf("w/h of cell %v = %d/%d\n", cell.String(), cell.W(), cell.H())
 }
-func (t *Table) RenderTo(f *strings.Builder, smooth bool, withOuterFrame bool) {
-	var m RuneMatrix
-	if withOuterFrame {
-		m = NewRuneMatrix(t.W()+2, t.H()+2)
-		// m.FillAll('⋅')
-		m.HorizontalLineAt(0)
-		m.HorizontalLineAt(m.h - 1)
-		m.VerticalLineAt(0)
-		m.VerticalLineAt(m.w - 1)
-		t.RenderToMatrix(1, 1, t.W(), t.H(), &m)
+func (t *Table) RenderTo(sb *strings.Builder, smooth bool, withOuterFrame bool) {
+	if t.m == nil {
+		println("table creating matrix of size", t.W()+2, "x", t.H()+2)
+		t.m = NewRuneMatrix(t.W()+2, t.H()+2)
 	} else {
-		m = NewRuneMatrix(t.W(), t.H())
-		// m.FillAll('⋅')
-		t.RenderToMatrix(0, 0, t.W(), t.H(), &m)
+		if t.m.w < t.W()+2 || t.m.h < t.H()+2 {
+			println("table growing matrix from", t.m.w, "x", t.m.h, "to", t.W()+2, "x", t.H()+2)
+			t.m = NewRuneMatrix(t.W()+2, t.H()+2)
+		}
 
 	}
-	if smooth {
-		m.SmoothOpenCrossEnds()
+	t.m.Clear()
+	if withOuterFrame {
+		t.m.HorizontalLineAt(0)
+		t.m.HorizontalLineAt(t.m.h - 1)
+		t.m.VerticalLineAt(0)
+		t.m.VerticalLineAt(t.m.w - 1)
 	}
-	m.RenderTo(f)
+	t.RenderToMatrix(1, 1, t.W(), t.H(), t.m)
+	if smooth {
+		t.m.SmoothOpenCrossEnds()
+	}
+	if withOuterFrame {
+		t.m.RenderTo(0, 0, t.W()+2, t.H()+2, sb)
+	} else {
+		t.m.RenderTo(1, 1, t.W(), t.H(), sb)
+	}
 }
 func (t *Table) RenderToMatrix(x int, y int, w int, h int, m *RuneMatrix) {
 	index := 0
@@ -162,7 +175,6 @@ func (t *Table) RenderToMatrix(x int, y int, w int, h int, m *RuneMatrix) {
 }
 func (t *Table) String() string {
 	return t.ToString(true)
-
 }
 func (t *Table) ToString(withOuterFrame bool) string {
 	sb := strings.Builder{}

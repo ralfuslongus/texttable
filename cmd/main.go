@@ -33,7 +33,36 @@ func printColoredStacktrace(err interface{}) {
 }
 
 func run() {
+	t4 := NewTable(3, 2)
+	t4.Add(NewCell("LEFT").
+		WithAlignment(LEFT).
+		WithMaxWidthOfLines(20))
+	t4.Add(NewCell("CENTER").
+		WithAlignment(CENTER).
+		WithMaxWidthOfLines(20))
+	t4.Add(NewCell("RIGHT").
+		WithAlignment(RIGHT).
+		WithMaxWidthOfLines(20))
 
+	t4.AddSeparatorsTillEndOfRow()
+
+	t4.Add(NewCell(1).
+		WithAlignment(LEFT))
+	t4.Add(NewCell(true).
+		WithAlignment(CENTER))
+	t4.Add(NewCell(2).
+		WithAlignment(RIGHT))
+
+	t4.AddSeparatorsTillEndOfRow()
+
+	t4.Add(NewCell("Multiline-\nString-\nNr 1").
+		WithAlignment(LEFT))
+	t4.Add(NewCell("Multiline-\nString-\nNr 2").
+		WithAlignment(CENTER))
+	t4.Add(NewCell("Multiline-\nString-\nNr 3").
+		WithAlignment(RIGHT))
+	result := t4.String()
+	println(result)
 }
 
 func main() {

@@ -9,7 +9,7 @@ type RuneMatrix struct {
 	Runes []rune
 }
 
-func NewRuneMatrix(w, h int) RuneMatrix {
+func NewRuneMatrix(w, h int) *RuneMatrix {
 	size := w * h
 	// fmt.Printf("making []rune with size %d*%d=%d", w, h, size)
 	runes := make([]rune, size, size)
@@ -17,9 +17,12 @@ func NewRuneMatrix(w, h int) RuneMatrix {
 	m.Fill(0, 0, w, h, ' ') // Leerzeichen schreiben
 	// m.FillAll('.')           // Leerzeichen schreiben
 	// m.Fill(w, 0, 1, h, '\n') // Zeilenumbrüche am rechten Rand schreiben
-	return m
+	return &m
 }
 
+func (m *RuneMatrix) Clear() {
+	m.FillAll(' ')
+}
 func (m *RuneMatrix) FillAll(r rune) {
 	m.Fill(0, 0, m.w, m.h, r)
 }
@@ -180,29 +183,23 @@ func WriteString(m *RuneMatrix, x, y int, s string) (int, int) {
 	}
 	return width, height
 }
-
 func (m *RuneMatrix) String() string {
+	return m.ToString(0, 0, m.w, m.h)
+}
+func (m *RuneMatrix) ToString(x, y, w, h int) string {
 	sb := strings.Builder{}
-	m.RenderTo(&sb)
+	m.RenderTo(x, y, w, h, &sb)
 	return sb.String()
 }
-
-func (m *RuneMatrix) RenderTo(f *strings.Builder) {
-	// for i, r := range m.Runes {
-	// 	f.WriteString(string(r))
-	// 	if i < (len(m.Runes)-2) && (i+1)%m.w == 0 {
-	// 		f.WriteString("↵\n")
-	// 		// f.WriteString("\n")
-	// 	}
-	// }
-	i := 0
-	for y := 0; y < m.h; y++ {
-		for x := 0; x < m.w; x++ {
-			f.WriteRune(m.Runes[i])
+func (m *RuneMatrix) RenderTo(x, y, w, h int, sb *strings.Builder) {
+	for dy := y; dy < y+h; dy++ {
+		for dx := x; dx < x+w; dx++ {
+			i := dx + (dy * m.w)
+			sb.WriteRune(m.Runes[i])
 			i++
 		}
-		if i < len(m.Runes)-2 {
-			f.WriteRune('\n')
+		if dy < (y + h - 1) {
+			sb.WriteRune('\n')
 		}
 	}
 
