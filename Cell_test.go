@@ -9,7 +9,6 @@ func TestBool(testing *testing.T) {
 	w, h := c.RuneDim()
 	AssertEqual(testing, w, 4)
 	AssertEqual(testing, h, 1)
-	println(c.String())
 }
 func TestEmptyAlignment(testing *testing.T) {
 	c := NewCell("")

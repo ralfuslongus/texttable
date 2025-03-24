@@ -13,6 +13,9 @@ const (
 	MAX      int  = 255
 )
 
+// TODO: Keine DEFAULT_CODEPAGE mehr anbieten, Tables müssen ihre Zellen mit einer eigenen
+//
+//	Codepage versorgen, oder so
 var (
 	DEFAULT_CODEPAGE = NewDynamicCodepage()
 )
