@@ -1,180 +1,131 @@
 package texttable
 
 import (
+	"strings"
 	"testing"
 )
 
-// ANSI Escape Codes für Farben
-const (
-	Red    = "\033[31m"
-	Green  = "\033[32m"
-	Yellow = "\033[33m"
-	Reset  = "\033[0m"
-)
+/*
+Was soll Table alles können:
+1.) So wenig Speicher wie möglich verbrauchen (feather_m0: 32kB RAM!, Table bisher: ~20kB)
+	- keine zwischenstrings, direkt auf io.Writer/machine.Serial schreiben
+	- bytes statt runes speichern, mit DynamicCodepage, auf 255 Zeichen beschränkt
+	- Rahmen nicht zeichenweise speichern, nur wo
+2.) Hierarchy: Tables als Cells in anderen Tables möglich
+	- ICell interface (RuneDim(), RuneAt(x,y))
+3.) Dynamische Rahmen, verbinden sich mit umliegenden Rahmen
+	- Umgebende Rahmen/runes mit einbeziehen (wie?), auch zwischen den Hierarchien (Table als Cell)
+4.) Änderbarkeit
+	- Set(col,row)
+	- Clear(col/row)
+	- SetColSep(col,rune)
+	- SetRowSep(row,rune)
+	- Gesamtgröße immer neu berechnen
+*/
 
-func TestMultiLineCell(t *testing.T) {
-	// Eine Cell mit mehreren Zeilen
-	multiLineCell := NewCell("Line1\nLine2")
-	result := multiLineCell.String()
-	expected := "Line1\nLine2"
+func TestDimChangesWithSeparators(testing *testing.T) {
+	t := NewTable(2, 2, NoBorders)
+	// 2x2-table with no separators
+	t.Append("a")
+	t.Append("b")
+	t.Append("c")
+	t.Append("d")
 
-	AssertEqual(t, result, expected)
+	// dim with single-char-cells = 2x2
+	// without any separators
+	w, h := t.RuneDim()
+	AssertEqual(testing, w, 2)
+	AssertEqual(testing, h, 2)
+
+	// with all borders
+	t.borderConfig = AllBorders
+	w, h = t.RuneDim()
+	AssertEqual(testing, w, 5)
+	AssertEqual(testing, h, 5)
 }
+func TestGesamt(testing *testing.T) {
+	var w, h int
+	t := NewTable(2, 3, NoBorders)
+	t.Append("c0")
+	t.Append("c1")
+	t.Append("c2")
+	// t.Append("")
 
-func TestManualRuneMatrix(t *testing.T) {
-	// Eine RuneMatrix manuell beschreiben
-	m := NewRuneMatrix(3, 2)
-	m.Set(0, 0, 'a')
-	m.Set(1, 0, 'b')
-	m.Set(2, 0, 'c')
-	m.Set(0, 1, 'A')
-	m.Set(1, 1, 'B')
-	m.Set(2, 1, 'C')
-	result := m.String()
-	expected := "abc\nABC"
+	AssertEqual(testing, t.GetAt(0, 0).String(), "c0")
+	AssertEqual(testing, t.GetAt(1, 0).String(), "c1")
+	AssertEqual(testing, t.GetAt(0, 1).String(), "c2")
+	AssertEqual(testing, t.GetAt(1, 1), nil)
 
-	AssertEqual(t, result, expected)
-}
+	AssertEqual(testing, t.RuneAt(0, 0), 'c')
+	AssertEqual(testing, t.RuneAt(1, 0), '0')
+	AssertEqual(testing, t.RuneAt(2, 0), 'c')
+	AssertEqual(testing, t.RuneAt(3, 0), '1')
 
-func TestSimpleTableWithoutOuterFrame(t *testing.T) {
-	// Ein einfacher Table ohne alles
-	t1 := NewTable(2, 2)
-	t1.Add("v1", "v2")
-	t1.Add("v3", "v4")
-	result := t1.ToString(false)
-	expected := "v1│v2\nv3│v4"
+	AssertEqual(testing, t.RuneAt(0, 1), 'c')
+	AssertEqual(testing, t.RuneAt(1, 1), '2')
+	AssertEqual(testing, t.RuneAt(2, 1), ' ')
+	AssertEqual(testing, t.RuneAt(3, 1), ' ')
 
-	AssertEqual(t, result, expected)
-}
+	sb := strings.Builder{}
+	t.WriteTo(&sb)
+	AssertEqual(testing, sb.String(), "c0c1\nc2  ")
 
-func TestSimpleTableWithHeaderSeparatorAndOuterFrame(t *testing.T) {
-	// Ein einfacher Table ohne Rand, mit Header-Separatoren
-	t1 := NewTable(2, 4)
-	t1.Add("A1", "A2")
-	t1.AddSeparatorsTillEndOfRow()
-	t1.Add("b1", "b2")
-	t1.Add("c1", "c2")
-	t1.Add("d1", "d2")
-	result := t1.ToString(false)
-	expected := `A1│A2
-──┼──
-b1│b2
-c1│c2
-d1│d2`
-	AssertEqual(t, result, expected)
-}
-func TestNestedTables(t *testing.T) {
-	// Ein einfacher Table ohne Rand, mit Header-Separatoren
+	// Change cells
+	t.ReplaceAt(0, 0, "A")
+	t.ReplaceAt(1, 0, "B")
+	t.ReplaceAt(0, 1, "C")
+	// t.ReplaceAt(1, 1, "D")
+	AssertEqual(testing, t.GetAt(0, 0).String(), "A")
+	AssertEqual(testing, t.GetAt(1, 0).String(), "B")
+	AssertEqual(testing, t.GetAt(0, 1).String(), "C")
+	// AssertEqual(testing, t.GetAt(1, 1).String(), "D")
+	w, h = t.RuneDim()
+	AssertEqual(testing, w, 2)
+	AssertEqual(testing, h, 2)
+	AssertEqual(testing, t.String(), "AB\nC ")
 
-	t1 := NewTable(2, 2)
-	t1.Add("a", "b")
-	t1.AddSeparatorsTillEndOfRow()
-	t1.Add("c", "d")
+	// Changes of Dim by setting separators
+	// t.SetColSep(0, SINGLE)
+	// w, h = t.RuneDim()
+	// AssertEqual(testing, w, 5)
+	// AssertEqual(testing, h, 2)
+	// AssertEqual(testing, t.String(), "|AB\n|CD")
 
-	// Ein geschachtelter Table mit Rand
-	t2 := NewTable(2, 2)
-	t2.Add("A", "B")
-	t2.Add("C", t1)
-	result := t2.ToString(true)
-	expected := `┌─┬───┐
-│A│B  │
-│C│a│b│
-│ ├─┼─┤
-│ │c│d│
-└─┴─┴─┘`
+	// t.SetColSep(1, SINGLE)
+	// w, h = t.RuneDim()
+	// AssertEqual(testing, w, 6)
+	// AssertEqual(testing, h, 2)
+	// AssertEqual(testing, t.String(), "|A|B\n|C|D")
 
-	AssertEqual(t, result, expected)
-}
-func TestTableWithHeaderAndFooterSeparator(t *testing.T) {
-	// Ein einfacher Table mit Rand, Header- und Footer-Separatoren
-	t3 := NewTable(3, 2)
-	t3.Add("Über1", "Über2", "Preis")
-	t3.AddSeparatorsTillEndOfRow()
-	t3.Add("midA")
-	t3.Add("midB")
-	t3.Add(3)
-	t3.Add("midA")
-	t3.Add("midB", 4)
-	t3.Add("midA", "midB", 5)
-	t3.AddSeparatorsTillEndOfRow()
-	t3.Add("Unter1", "GESAMTPREIS:", 3+4+5)
-	result := t3.ToString(true)
-	expected := `┌──────┬────────────┬─────┐
-│Über1 │Über2       │Preis│
-├──────┼────────────┼─────┤
-│midA  │midB        │    3│
-│midA  │midB        │    4│
-│midA  │midB        │    5│
-├──────┼────────────┼─────┤
-│Unter1│GESAMTPREIS:│   12│
-└──────┴────────────┴─────┘`
+	// t.SetColSep(2, SINGLE)
+	// w, h = t.RuneDim()
+	// AssertEqual(testing, w, 7)
+	// AssertEqual(testing, h, 2)
+	// AssertEqual(testing, t.String(), "|A|B|\n|C|D|")
 
-	AssertEqual(t, result, expected)
-}
-func TestTableWithManualAlignmentsAndMaxWidth(t *testing.T) {
-	t4 := NewTable(3, 2)
-	t4.Add(NewCell("LEFT").
-		WithAlignment(LEFT).
-		WithMaxWidthOfLines(20))
-	t4.Add(NewCell("CENTER").
-		WithAlignment(CENTER).
-		WithMaxWidthOfLines(20))
-	t4.Add(NewCell("RIGHT").
-		WithAlignment(RIGHT).
-		WithMaxWidthOfLines(20))
+	// t.SetRowSep(0, SINGLE)
+	// w, h = t.RuneDim()
+	// AssertEqual(testing, w, 7)
+	// AssertEqual(testing, h, 3)
+	// AssertEqual(testing, t.String(), "-----\n|A|B|\n|C|D|")
 
-	t4.AddSeparatorsTillEndOfRow()
+	// t.SetRowSep(1, SINGLE)
+	// w, h = t.RuneDim()
+	// AssertEqual(testing, w, 7)
+	// AssertEqual(testing, h, 4)
+	// AssertEqual(testing, t.String(), "-----\n|A|B|\n-----\n|C|D|")
 
-	t4.Add(NewCell(1).
-		WithAlignment(LEFT))
-	t4.Add(NewCell(true).
-		WithAlignment(CENTER))
-	t4.Add(NewCell(2).
-		WithAlignment(RIGHT))
+	// t.SetRowSep(3, SINGLE)
+	// w, h = t.RuneDim()
+	// AssertEqual(testing, w, 7)
+	// AssertEqual(testing, h, 5)
+	// AssertEqual(testing, t.String(), "-----\n|A|B|\n-----\n|C|D|\n\n-----")
 
-	t4.AddSeparatorsTillEndOfRow()
+	// // remove all separators, H&V
+	// t.SetColSep(0, 0).SetColSep(1, 0).SetColSep(2, 0).SetRowSep(0, 0).SetRowSep(1, 0).SetRowSep(2, 0)
+	// w, h = t.RuneDim()
+	// AssertEqual(testing, w, 4)
+	// AssertEqual(testing, h, 2)
+	// AssertEqual(testing, t.String(), "AB\nCD")
 
-	t4.Add(NewCell("Multiline-\nString-\nNr 1").
-		WithAlignment(LEFT))
-	t4.Add(NewCell("Multiline-\nString-\nNr 2").
-		WithAlignment(CENTER))
-	t4.Add(NewCell("Multiline-\nString-\nNr 3").
-		WithAlignment(RIGHT))
-	result := t4.ToString(true)
-	expected := `┌────────────────────┬────────────────────┬────────────────────┐
-│LEFT                │       CENTER       │               RIGHT│
-├────────────────────┼────────────────────┼────────────────────┤
-│1                   │        true        │                   2│
-├────────────────────┼────────────────────┼────────────────────┤
-│Multiline-          │     Multiline-     │          Multiline-│
-│String-             │      String-       │             String-│
-│Nr 1                │        Nr 2        │                Nr 3│
-└────────────────────┴────────────────────┴────────────────────┘`
-
-	AssertEqual(t, result, expected)
-}
-func TestGrowingTable(t *testing.T) {
-	t5 := NewTable(2, 2)
-	t5.Add("a")
-	t5.Add("b")
-	t5.Add("c")
-	t5.Add("d")
-
-	AssertEqual(t, t5.ToString(false), "a│b\nc│d")
-	t5.Add("e")
-	t5.Add("f")
-	t5.Add("g")
-	t5.Add("h")
-	AssertEqual(t, t5.ToString(false), "a│b\nc│d\ne│f\ng│h")
-}
-func TestModdingTable(t *testing.T) {
-	t5 := NewTable(2, 2)
-	t5.Add("a")
-	t5.Add("b")
-	t5.Add("c")
-	t5.Add("d")
-
-	AssertEqual(t, t5.ToString(false), "a│b\nc│d")
-	t5.Set(0, 0, "AAAA")
-	AssertEqual(t, t5.ToString(false), "AAAA│b\nc   │d")
 }

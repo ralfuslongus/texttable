@@ -1,184 +1,383 @@
 package texttable
 
 import (
+	"errors"
+	"io"
 	"strings"
 )
 
 type Table struct {
-	cells          []*Cell // alle Zellen in einem slice, wächst mit jedem Add
-	numberOfColums int     // die fixe Anzahl an Spalten
-	maxColW        []int   // die Maximalbreiten aller Spalten, wird bei jedem Add aktualisiert
-	maxRowH        []int   // die Maximalhöhen aller Zeilen, wird bei jedem Add aktualisiert
-	m              *RuneMatrix
+	cells   []ICell
+	columns int // fix
+	index   int
+	// rows         int	// grows
+	borderConfig *BorderConfig
+	// cached (Rune-)Width(s):
+	cachedWidths  []int
+	cachedHeights []int
+	cachedWidth   int
+	cachedHeight  int
 }
 
-func NewTable(numberOfColums, startCapacityOfRows int) *Table {
-	n := numberOfColums * startCapacityOfRows
-	cells := make([]*Cell, 0, n)
-	maxColW := make([]int, numberOfColums)
-	maxRowH := make([]int, startCapacityOfRows)
-	t := Table{cells: cells, numberOfColums: numberOfColums, maxColW: maxColW, maxRowH: maxRowH}
+func (t *Table) SetAlignment(a Alignment) ICell {
+	println("!!!!! SetAlignment not implemented by Table yet !!!!!")
+	return t
+}
+
+// ----------------------------------------------
+func NewTable(colums, initialRows int, borderConfig *BorderConfig) *Table {
+	cells := make([]ICell, 0, colums*initialRows)
+	t := Table{cells, colums, 0, borderConfig, nil, nil, -1, -1}
 	return &t
 }
-func (t *Table) W() int {
-	sum := 0
-	for _, w := range t.maxColW {
-		sum += w
+
+// ----------------------------------------------
+func (t *Table) Append(stringOrCells ...any) ICell {
+	var cell ICell
+	for _, stringOrCell := range stringOrCells {
+		// important: when modifieing table, clear all cached values
+		t.cachedWidths = nil
+		t.cachedHeights = nil
+		t.cachedWidth = -1
+		t.cachedHeight = -1
+
+		cell = NewCell(stringOrCell)
+		newCells := append(t.cells, cell)
+
+		if cap(newCells) != cap(t.cells) {
+			println("!!!!!warning: slice of cells changed by appending from ", cap(t.cells), "to", cap(newCells), "!!!!!")
+		}
+		t.cells = newCells
+		t.index++
 	}
-	return sum + t.numberOfColums - 1
+	return cell
 }
-func (t *Table) H() int {
-	sum := 0
-	for _, h := range t.maxRowH {
-		sum += h
+
+func (t *Table) GetAt(col, row int) ICell {
+	index := col + row*t.columns
+	return t.Get(index)
+}
+func (t *Table) Get(index int) ICell {
+	if index < 0 || index >= len(t.cells) {
+		return nil
+	} else {
+		return t.cells[index]
 	}
-	return sum
 }
-func (t *Table) AddSeparatorsTillEndOfRow() {
-	for {
-		t.AddSeparator()
-		if len(t.cells)%t.numberOfColums == 0 {
-			break
+func (t *Table) ReplaceAt(col, row int, stringOrCell any) (ICell, error) {
+	if col < 0 || row < 0 {
+		return t, errors.New("negative col or row")
+	}
+	index := col + row*t.columns
+	return t.Replace(index, stringOrCell)
+}
+func (t *Table) Replace(index int, stringOrCell any) (ICell, error) {
+	// important: when modifieing table, clear all cached values
+	t.cachedWidths = nil
+	t.cachedHeights = nil
+	t.cachedWidth = -1
+	t.cachedHeight = -1
+	if index < 0 || index >= t.index {
+		return t, errors.New("index out of range")
+	}
+
+	cell := NewCell(stringOrCell)
+	t.cells[index] = cell
+
+	return t.cells[index], nil
+}
+
+// ----------------------------------------------
+func (t *Table) CachedRuneDim() (width, height int) {
+	if t.cachedWidth == -1 || t.cachedHeight == -1 {
+		t.cachedWidth, t.cachedHeight = t.RuneDim()
+	}
+	return t.cachedWidth, t.cachedHeight
+}
+func (t *Table) RuneDim() (width, height int) {
+	widths, heights := t.GetCachedWidthsAndHeights()
+	width, height = 0, 0
+	var col, row int
+	var w, h int
+	for col, w = range widths {
+		width += w
+		if t.borderConfig.GetSeparatorLeftOf(col, t.columns) != 0 {
+			width++
+		}
+	}
+	if t.borderConfig.GetSeparatorRightOf(col, t.columns) != 0 {
+		width++
+	}
+	rows := t.GetNumberOfUsedRows()
+	for row, h = range heights {
+		height += h
+		if t.borderConfig.GetSeparatorAbove(row, rows) != 0 {
+			height++
+		}
+	}
+	if t.borderConfig.GetSeparatorBelow(row, rows) != 0 {
+		height++
+	}
+
+	return width, height
+}
+func max(a, b int) int {
+	if a > b {
+		return a
+	} else {
+		return b
+	}
+}
+
+func (t *Table) GetCachedWidthsAndHeights() ([]int, []int) {
+	if t.cachedWidths == nil || t.cachedHeights == nil {
+		// println("!!!!!calculating widths and heights!!!!!")
+		t.cachedWidths, t.cachedHeights = t.CalcWidthsAndHeights()
+	} else {
+		// println("using cached widths and heights")
+	}
+	return t.cachedWidths, t.cachedHeights
+}
+func (t *Table) GetNumberOfUsedRows() int {
+	usedRows := len(t.cells) / t.columns
+	// handle incomplete rows
+	if len(t.cells)%t.columns > 0 {
+		usedRows++
+	}
+	return usedRows
+
+}
+func (t *Table) CalcWidthsAndHeights() ([]int, []int) {
+	rows := t.GetNumberOfUsedRows()
+	widths := make([]int, t.columns)
+	heights := make([]int, rows)
+	for index, cell := range t.cells {
+		col := index % t.columns
+		row := index / t.columns
+		if cell != nil {
+			w, h := cell.RuneDim()
+			widths[col] = max(widths[col], w)
+			heights[row] = max(heights[row], h)
+		}
+	}
+	return widths, heights
+}
+
+func (t *Table) SmoothedRuneAt(x, y int) rune {
+	r0 := t.RuneAt(x, y)
+	b0 := IsBorderRune(r0)
+	if !b0 {
+		return r0
+	} else {
+		rAbove := t.RuneAt(x, y-1)
+		rRight := t.RuneAt(x+1, y)
+		rBelow := t.RuneAt(x, y+1)
+		rLeft := t.RuneAt(x-1, y)
+		bAbove := IsBorderRune(rAbove)
+		bRight := IsBorderRune(rRight)
+		bBelow := IsBorderRune(rBelow)
+		bLeft := IsBorderRune(rLeft)
+
+		switch {
+		case bAbove && bRight && bBelow && bLeft:
+			return '┼'
+		case bAbove && bRight && bBelow && !bLeft:
+			return '├'
+		case bAbove && bRight && !bBelow && bLeft:
+			return '┴'
+		case bAbove && bRight && !bBelow && !bLeft:
+			return '└'
+		case bAbove && !bRight && bBelow && bLeft:
+			return '┤'
+		case bAbove && !bRight && bBelow && !bLeft:
+			return '│'
+		case bAbove && !bRight && !bBelow && bLeft:
+			return '┘'
+		case bAbove && !bRight && !bBelow && !bLeft:
+			return '╵'
+		case !bAbove && bRight && bBelow && bLeft:
+			return '┬'
+		case !bAbove && bRight && bBelow && !bLeft:
+			return '┌'
+		case !bAbove && bRight && !bBelow && bLeft:
+			return '─'
+		case !bAbove && bRight && !bBelow && !bLeft:
+			return '╶'
+		case !bAbove && !bRight && bBelow && bLeft:
+			return '┐'
+		case !bAbove && !bRight && bBelow && !bLeft:
+			return '╷'
+		case !bAbove && !bRight && !bBelow && bLeft:
+			return '╴'
+		case !bAbove && !bRight && !bBelow && !bLeft:
+			return ' '
+		default:
+			return ' '
 		}
 	}
 }
-func (t *Table) AddSeparator() {
-	// Separator erzeugen und anhängen
-	sep := NewCell(nil).AsSeparator()
-	t.append(sep)
-}
-func (t *Table) Add(vals ...interface{}) {
-	for _, v := range vals {
-		t.append(NewCell(v))
-	}
-}
-func (t *Table) Set(x, y int, v interface{}) {
-	i := x + (y * t.numberOfColums)
-	t.cells[i] = NewCell(v)
-}
 
-func BoolToString(b bool) string {
-	if b {
-		return "true"
-	} else {
-		return "false"
-	}
-}
-func IntToString(num int) string {
-	if num == 0 {
-		return "0"
-	}
+// ╴ ╵ ╶ ╷
+// ┌─┬─┬─┐
+// │H│d│r│
+// ├─┼─┼─┤
+// │F│t│r│
+// └─┴─┴─┘
+func (t *Table) RuneAt(x, y int) rune {
+	/*
+		Was muss ich wissen:
+		Wie breit sind alle Spalten
+		Wie hoch sind alle Zeilen
+		Befinde ich mich in einer Zelle oder in einem Rahmen?
+		Welcher Rahmen?
+		Welche Zelle?
+		Wo in der Zelle?
 
-	// Bestimme das Vorzeichen
-	isNegative := num < 0
-	if isNegative {
-		num = -num
-	}
+		Algorithmus:
+		cx/cy heißt calculated-x/-y
+		gehe in x-Richtung durch, bis cx/cy gleich x/y ist
 
-	// Erstelle einen Slice von runes für die Ziffern
-	var digits []rune
-	for num > 0 {
-		digit := num % 10
-		digits = append(digits, rune('0'+digit)) // '0' ist der ASCII-Wert für die Ziffer 0
-		num /= 10
+		Die beiden Richtungen unabhängig behandeln
+		1.) Breite aller Spalten, wo in welchem Rahmen, in welcher Spalte, relative Cell-X-Position
+		2.) Höhe aller Zeilen, wo in welchem Rahmen, in welcher Zeile, relative Cell-Y-Position
+	*/
+	w, h := t.CachedRuneDim()
+	if x < 0 || y < 0 || x >= w || y >= h {
+		// out of range
+		return ' '
 	}
+	cx := 0 // calculated-x, zum durchgehen durch die Zeile bis ich die richtige Spalte oder Separator gefunden habe
+	dx := 0 // delta-x, relativ zur Zelle
+	var selectedCol = -1
+	var selectedColSep rune
+	widths, heights := t.GetCachedWidthsAndHeights()
 
-	// Wenn die Zahl negativ ist, füge das Minuszeichen hinzu
-	if isNegative {
-		digits = append(digits, '-')
-	}
-
-	// Umkehren der Ziffern, da sie in umgekehrter Reihenfolge hinzugefügt wurden
-	for i, j := 0, len(digits)-1; i < j; i, j = i+1, j-1 {
-		digits[i], digits[j] = digits[j], digits[i]
-	}
-
-	return string(digits)
-}
-func (t *Table) append(cell *Cell) {
-	// ...Zelle anhängen
-	index := len(t.cells)
-	t.cells = append(t.cells, cell)
-
-	// Zeilen- und Spaltennummern der neuen Zelle berechnen
-	rowNum := index / t.numberOfColums
-	colNum := index % t.numberOfColums
-	// fmt.Printf("adding value to index %d at row/col %d/%d\n", index, rowNum, colNum)
-
-	// Maximalbreite der aktuellen Spalte updaten, Maxima wurden schon im Konstruktor angelegt weil Anzahl Spalten bekannt ist
-	w := cell.W()
-	t.maxColW[colNum] = max(t.maxColW[colNum], w)
-
-	// Maximalhöhe der aktuellen Zeile updaten
-	h := cell.H()
-	if len(t.maxRowH) <= rowNum { // Zeile hat noch kein Maximum da startCapacityOfRows überschritten wurde, also anlegen, oder...
-		// fmt.Printf("Neues Zeilenmaximum für Zeile %d anlegen\n", rowNum)
-		t.maxRowH = append(t.maxRowH, h)
-	} else {
-		t.maxRowH[rowNum] = max(t.maxRowH[rowNum], h) // .. neues Maximum ermitteln und setzten
-	}
-	// fmt.Printf("w/h of cell %v = %d/%d\n", cell.String(), cell.W(), cell.H())
-}
-func (t *Table) RenderTo(sb *strings.Builder, smooth bool, withOuterFrame bool) {
-	if t.m == nil {
-		println("table creating matrix of size", t.W()+2, "x", t.H()+2)
-		t.m = NewRuneMatrix(t.W()+2, t.H()+2)
-	} else {
-		if t.m.w < t.W()+2 || t.m.h < t.H()+2 {
-			println("table growing matrix from", t.m.w, "x", t.m.h, "to", t.W()+2, "x", t.H()+2)
-			t.m = NewRuneMatrix(t.W()+2, t.H()+2)
-		}
-
-	}
-	t.m.Clear()
-	if withOuterFrame {
-		t.m.HorizontalLineAt(0)
-		t.m.HorizontalLineAt(t.m.h - 1)
-		t.m.VerticalLineAt(0)
-		t.m.VerticalLineAt(t.m.w - 1)
-	}
-	t.RenderToMatrix(1, 1, t.W(), t.H(), t.m)
-	if smooth {
-		t.m.SmoothOpenCrossEnds()
-	}
-	if withOuterFrame {
-		t.m.RenderTo(0, 0, t.W()+2, t.H()+2, sb)
-	} else {
-		t.m.RenderTo(1, 1, t.W(), t.H(), sb)
-	}
-}
-func (t *Table) RenderToMatrix(x int, y int, w int, h int, m *RuneMatrix) {
-	index := 0
-	rowNum := 0
-	dy := 0
-	dx := 0
-	for _, maxH := range t.maxRowH { // alle ZEILEN durchgehen
-		dx = 0
-		for i, maxW := range t.maxColW { // alle SPALTEN (der zeile) durchgehen
-			if index >= len(t.cells) {
-				break
+ColLoop:
+	for col := 0; col < t.columns; col++ {
+		// sep davor?
+		sep := t.borderConfig.GetSeparatorLeftOf(col, t.columns)
+		if sep != 0 {
+			if cx == x {
+				selectedColSep = sep
+				break ColLoop
 			}
-			cell := t.cells[index]
-			cell.RenderToMatrix(x+dx, y+dy, maxW, maxH, m)
-			index++
-			if i < len(t.maxColW)-1 { // wenn noch eine Spalte kommt Separator zeichen
-				for sy := 0; sy < maxH; sy++ {
-					m.Set(x+dx+maxW, y+dy+sy, '│')
-				}
-				dx++
-				dx += maxW
+			cx++
+		}
+		// Spalte durchlaufen
+		for dx = 0; dx < widths[col]; dx++ {
+			if cx == x {
+				selectedCol = col
+				break ColLoop
+			}
+			cx++
+		}
+	}
+	if selectedColSep == -0 && selectedCol == -1 {
+		// sep dahinter?
+		sep := t.borderConfig.GetSeparatorLeftOf(t.columns, t.columns)
+		if sep != 0 {
+			if cx == x {
+				selectedColSep = sep
 			}
 		}
-		dy += maxH
-		rowNum++
+	}
+	cy := 0 // calculated-y, zum durchgehen durch die Spalte bis ich die richtige Zeile oder Separator gefunden habe
+	dy := 0 // delta-y, relativ zur Zelle
+	var selectedRow = -1
+	var selectedRowSep rune
+
+	rows := t.GetNumberOfUsedRows()
+RowLoop:
+	for row := 0; row < rows; row++ {
+		// sep davor?
+		sep := t.borderConfig.GetSeparatorAbove(row, rows)
+		if sep != 0 {
+			if cy == y {
+				selectedRowSep = sep
+				break RowLoop
+			}
+			cy++
+		}
+		// Zeile durchlaufen
+		for dy = 0; dy < heights[row]; dy++ {
+			if cy == y {
+				selectedRow = row
+				break RowLoop
+			}
+			cy++
+		}
+	}
+	if selectedRowSep == -0 && selectedRow == -1 {
+		// sep dahinter?
+		sep := t.borderConfig.GetSeparatorAbove(rows, rows)
+		if sep != 0 {
+			if cy == y {
+				selectedRowSep = sep
+			}
+		}
+	}
+	if selectedRowSep != 0 {
+		return rune(selectedRowSep)
+	}
+	if selectedColSep != 0 {
+		return rune(selectedColSep)
+	}
+	if selectedCol >= 0 && selectedRow >= 0 {
+		cell := t.GetAt(selectedCol, selectedRow)
+		// s := cell.String()
+		if cell == nil {
+			return ' '
+		} else {
+			r := cell.RuneAt(dx, dy)
+			// println("selected: x/y", x, "/", y, "col/row", selectedCol, "/", selectedRow, "dx/dy:", dx, "/", dy, "rune:", string(r), "cell-string:", s)
+			return r
+		}
+	} else {
+		// println("!!!!!!!!!!RuneAt(x,y):", x, y, "out of range !!!!!!!!!!!!!")
+		return ' '
+		// panic("out of range")
 	}
 }
+
+// ----------------------------------------------
+
+// conveenient method for debugging, wastes memory on strings.Builder
 func (t *Table) String() string {
-	return t.ToString(true)
-}
-func (t *Table) ToString(withOuterFrame bool) string {
 	sb := strings.Builder{}
-	t.RenderTo(&sb, true, withOuterFrame)
+	t.WriteTo(&sb)
 	return sb.String()
+}
 
+// used to write directly to machine.serial when running on microcontroller
+// no need to waste memory with strings.Builder
+func (t *Table) WriteTo(writer io.Writer) (int, error) {
+	// calc max columns-width
+	// calc total table-width (sum of column-width + column-separators)
+	// calc max row-heights
+	// calc total table-height (sum of row-heights + row-separators)
+	// render rune-by-rune with surrounding runes
+	bytesWritten := 0
+	w, h := t.RuneDim()
+	// fmt.Printf("t.RuneDim: %v/%v\n", w, h)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			// r := t.RuneAt(x, y)
+			r := t.SmoothedRuneAt(x, y)
+			// fmt.Printf("RuneAt(%d/%d): %v\n", x, y, r)
+			i, err := writer.Write([]byte(string(r)))
+			bytesWritten += i
+			if err != nil {
+				return bytesWritten, err
+			}
+		}
+		if y < h-1 {
+			i, err := writer.Write([]byte("\n"))
+			bytesWritten += i
+			if err != nil {
+				return bytesWritten, err
+			}
+		}
+
+	}
+	return bytesWritten, nil
 }

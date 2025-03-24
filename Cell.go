@@ -1,101 +1,173 @@
 package texttable
 
 import (
+	"io"
 	"strings"
 )
 
+// ----------------------------------------------
+type Alignment byte
+
+const (
+	LEFT   Alignment = 0
+	CENTER Alignment = iota
+	RIGHT  Alignment = iota
+)
+
+// ----------------------------------------------
 type Cell struct {
-	lines           [][]rune
-	maxWidthOfLines int
-	alignment       Alignment
-	separator       bool
+	lines     [][]byte
+	alignment Alignment
+	W, H      int
 }
 
-func NewCell(v interface{}) *Cell {
+func (c *Cell) SetAlignment(a Alignment) ICell {
+	c.alignment = a
+	return c
+}
 
+func NewCell(v any) ICell {
+	var s string
+	var a Alignment
 	switch val := v.(type) {
-	case *Cell:
-		// Zelle so wie sie ist anhängen
-		return val
 	case nil:
-		// Table ohne Ränder als string anhängen
-		return NewCellFromString("").WithAlignment(LEFT)
-	case *Table:
-		// Table ohne Ränder als string anhängen
-		return NewCellFromString(val.ToString(false)).WithAlignment(LEFT)
+		return nil
 	case string:
-		// Zelle mit gegebenem string erzeugen und anhängen
-		return NewCellFromString(val).WithAlignment(LEFT)
+		a = LEFT
+		s = val
 	case bool:
-		// Zelle mit geSprintetem val erzeugen und anhängen
-		return NewCellFromString(BoolToString(val)).WithAlignment(RIGHT)
+		a = RIGHT
+		s = BoolToString(val)
 	case int:
-		// Zelle mit geSprintetem val erzeugen und anhängen
-		return NewCellFromString(IntToString(val)).WithAlignment(RIGHT)
+		a = RIGHT
+		s = IntToString(val)
+	case ICell:
+		return val
 	default:
-		// Zelle mit geSprintetem val erzeugen und anhängen
-		return NewCellFromString("!unsupported type!").WithAlignment(CENTER)
+		s = "!unsupported type!"
 	}
-}
-func NewCellFromString(multiLine string) *Cell {
-	// multiLine := val //fmt.Sprintf("%v", val)
-	parts := strings.Split(multiLine, "\n")
-	lines := make([][]rune, len(parts))
-	maxWidthOfLines := 0
-	for i, part := range parts {
-		line := []rune(part)
-		lines[i] = line
-		maxWidthOfLines = max(maxWidthOfLines, len(line))
-	}
-	cell := Cell{lines, maxWidthOfLines, 0, false}
-	return &cell
-}
-func (cell *Cell) WithAlignment(alignment Alignment) *Cell {
-	cell.alignment = alignment
-	return cell
-}
-func (cell *Cell) WithMaxWidthOfLines(max int) *Cell {
-	cell.maxWidthOfLines = max
-	return cell
-}
-func (cell *Cell) AsSeparator() *Cell {
-	cell.separator = true
-	return cell
-}
-func (cell *Cell) W() int {
-	return cell.maxWidthOfLines
-}
-func (cell *Cell) H() int {
-	return len(cell.lines)
-}
-func (cell *Cell) RenderToMatrix(x int, y int, w int, h int, m *RuneMatrix) {
-	if cell.separator {
-		for i := 0; i < w; i++ {
-			for j := 0; j < h; j++ {
-				m.Set(x+i, y+j, '┼')
-			}
-		}
-	} else {
-		for i, line := range cell.lines {
-			var xOffset int
-			switch cell.alignment {
-			case LEFT:
-				xOffset = 0
-			case CENTER:
-				xOffset = (w - len(line)) / 2
-			case RIGHT:
-				xOffset = w - len(line)
-			}
 
-			for j, r := range line {
-				m.Set(x+xOffset+j, y+i, r)
-			}
+	s = strings.ReplaceAll(s, "\r\n", "\n") // win to linux
+	s = strings.ReplaceAll(s, "\r", "\n")   // mac to linux
+	var parts []string
+	if s == "" {
+		parts = nil
+	} else {
+		parts = strings.Split(s, "\n")
+	}
+	w := 0
+	h := len(parts)
+	lines := make([][]byte, 0, h)
+	for _, part := range parts {
+		line := DEFAULT_CODEPAGE.Encode(part)
+		// fmt.Printf("line %d: %v\n", i, line)
+		lines = append(lines, line)
+		if len(line) > w {
+			w = len(line)
 		}
 	}
+	// println("alignment: ", a)
+	c := Cell{lines: lines, alignment: a, W: w, H: h}
+	// fmt.Printf("lines: %v\n", lines)
+	return &c
 }
-func (cell *Cell) String() string {
-	m := NewRuneMatrix(cell.W(), cell.H())
-	// m.FillAll('⋅')
-	cell.RenderToMatrix(0, 0, cell.W(), cell.H(), m)
-	return m.String()
+
+func BoolToString(b bool) string {
+	if b {
+		return "true"
+	} else {
+		return "false"
+	}
+}
+func IntToString(num int) string {
+	if num == 0 {
+		return "0"
+	}
+
+	// Bestimme das Vorzeichen
+	isNegative := num < 0
+	if isNegative {
+		num = -num
+	}
+
+	// Erstelle einen Slice von runes für die Ziffern
+	var digits []rune
+	for num > 0 {
+		digit := num % 10
+		digits = append(digits, rune('0'+digit)) // '0' ist der ASCII-Wert für die Ziffer 0
+		num /= 10
+	}
+
+	// Wenn die Zahl negativ ist, füge das Minuszeichen hinzu
+	if isNegative {
+		digits = append(digits, '-')
+	}
+
+	// Umkehren der Ziffern, da sie in umgekehrter Reihenfolge hinzugefügt wurden
+	for i, j := 0, len(digits)-1; i < j; i, j = i+1, j-1 {
+		digits[i], digits[j] = digits[j], digits[i]
+	}
+
+	return string(digits)
+}
+
+// ----------------------------------------------
+func (c *Cell) RuneDim() (width, height int) {
+	return c.W, c.H
+}
+func (c *Cell) RuneAt(x, y int) rune {
+	// out of range
+	if y < 0 || y >= c.H {
+
+		return ' '
+		// fmt.Printf("cell %v: Cell.RuneAt x/y:", c, x, y)
+		// panic("Cell.RuneAt, out of range")
+	}
+	line := c.lines[y]
+
+	var alignOffset int
+	switch c.alignment {
+	case LEFT:
+		alignOffset = 0
+	case CENTER:
+		alignOffset = (c.W - len(line)) / 2
+	case RIGHT:
+		alignOffset = c.W - len(line)
+	default:
+		alignOffset = 0
+	}
+	x = x - alignOffset
+
+	if x < 0 || x >= len(line) {
+		return ' '
+	}
+	b := line[x]
+	r := DEFAULT_CODEPAGE.ecodeByte(b)
+	return r
+}
+
+// ----------------------------------------------
+func (c *Cell) String() string {
+	sb := strings.Builder{}
+	c.WriteTo(&sb)
+	return sb.String()
+}
+
+func (c *Cell) WriteTo(writer io.Writer) (int, error) {
+	bytesWritten := 0
+	for _, line := range c.lines {
+		s := DEFAULT_CODEPAGE.Decode(line)
+
+		i, err := writer.Write([]byte(s))
+		bytesWritten += i
+		if err != nil {
+			return bytesWritten, err
+		}
+	}
+	// i, err := writer.Write([]byte("\n"))
+	// bytesWritten += i
+	// if err != nil {
+	// 	return bytesWritten, err
+	// }
+	return bytesWritten, nil
 }

@@ -10,7 +10,8 @@ import (
 )
 
 func printInfos(t *Table) {
-	fmt.Printf("w/h of table: %d/%d\n", t.W(), t.H())
+	w, h := t.CachedRuneDim()
+	fmt.Printf("w/h of table: %d/%d\n", w, h)
 }
 
 func printColoredStacktrace(err interface{}) {
@@ -33,34 +34,24 @@ func printColoredStacktrace(err interface{}) {
 }
 
 func run() {
-	t4 := NewTable(3, 2)
-	t4.Add(NewCell("LEFT").
-		WithAlignment(LEFT).
-		WithMaxWidthOfLines(20))
-	t4.Add(NewCell("CENTER").
-		WithAlignment(CENTER).
-		WithMaxWidthOfLines(20))
-	t4.Add(NewCell("RIGHT").
-		WithAlignment(RIGHT).
-		WithMaxWidthOfLines(20))
+	t4 := NewTable(3, 2, AllBorders)
+	t4.Append("LEFT").SetAlignment(LEFT)
+	t4.Append("CENTER").SetAlignment(CENTER)
+	t4.Append("RIGHT___________________").SetAlignment(RIGHT)
 
-	t4.AddSeparatorsTillEndOfRow()
+	// evtl. TODO: BorderConfig ändern damit einzelne Col/Row-Separators gesetzte werden können
+	//t4.AppendSeparatorsTillEndOfRow()
 
-	t4.Add(NewCell(1).
-		WithAlignment(LEFT))
-	t4.Add(NewCell(true).
-		WithAlignment(CENTER))
-	t4.Add(NewCell(2).
-		WithAlignment(RIGHT))
+	t4.Append(1).SetAlignment(LEFT)
+	t4.Append(true).SetAlignment(CENTER)
+	t4.Append(2).SetAlignment(RIGHT)
 
-	t4.AddSeparatorsTillEndOfRow()
+	// evtl. TODO: BorderConfig ändern damit einzelne Col/Row-Separators gesetzte werden können
+	//t4.AppendSeparatorsTillEndOfRow()
 
-	t4.Add(NewCell("Multiline-\nString-\nNr 1").
-		WithAlignment(LEFT))
-	t4.Add(NewCell("Multiline-\nString-\nNr 2").
-		WithAlignment(CENTER))
-	t4.Add(NewCell("Multiline-\nString-\nNr 3").
-		WithAlignment(RIGHT))
+	t4.Append("Multiline-\nString-\nNr 1").SetAlignment(LEFT)
+	t4.Append("Multiline-\nString-\nNr 2").SetAlignment(CENTER)
+	t4.Append("Multiline-\nString-\nNr 3").SetAlignment(RIGHT)
 	result := t4.String()
 	println(result)
 }
