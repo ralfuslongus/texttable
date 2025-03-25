@@ -2,6 +2,8 @@ package texttable
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSingleRunes(t *testing.T) {
@@ -9,33 +11,33 @@ func TestSingleRunes(t *testing.T) {
 	rIn := 'a'
 	b := cp.encodeRune(rIn)
 	rOut := cp.ecodeByte(b)
-	AssertEqual(t, rOut, rIn)
+	assert.Equal(t, rOut, rIn)
 
 	rIn = 'b'
 	b = cp.encodeRune(rIn)
 	rOut = cp.ecodeByte(b)
-	AssertEqual(t, rOut, rIn)
+	assert.Equal(t, rOut, rIn)
 
 	rIn = 'c'
 	b = cp.encodeRune(rIn)
 	rOut = cp.ecodeByte(b)
-	AssertEqual(t, rOut, rIn)
+	assert.Equal(t, rOut, rIn)
 }
 func TestStrings(t *testing.T) {
 	cp := NewDynamicCodepage()
 	sIn := "abcdefghij"
 	bytes := cp.Encode(sIn)
 	// fmt.Printf("% x\n", bytes)
-	AssertEqual(t, bytes[0], byte(1))
-	AssertEqual(t, bytes[1], byte(2))
-	AssertEqual(t, bytes[2], byte(3))
+	assert.Equal(t, bytes[0], byte(1))
+	assert.Equal(t, bytes[1], byte(2))
+	assert.Equal(t, bytes[2], byte(3))
 
 	sOut := cp.Decode(bytes)
 	// println("sIn bytes")
 	// xd.Print([]byte(sIn), 0)
 	// println("sOut bytes")
 	// xd.Print([]byte(sOut), 0)
-	AssertEqual(t, sOut, sIn)
+	assert.Equal(t, sOut, sIn)
 }
 func TestOverflow(t *testing.T) {
 	cp := NewDynamicCodepage()
@@ -62,6 +64,6 @@ func TestOverflow(t *testing.T) {
 	// println("goodOut:", goodOut)
 	// println("badIn:", badIn)
 	// println("badOut:", badOut)
-	AssertEqual(t, goodIn, goodOut)
-	AssertNotEqual(t, badIn, badOut)
+	assert.Equal(t, goodIn, goodOut)
+	assert.NotEqual(t, badIn, badOut)
 }

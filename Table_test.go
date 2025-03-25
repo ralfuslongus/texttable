@@ -3,6 +3,8 @@ package texttable
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 /*
@@ -34,98 +36,103 @@ func TestDimChangesWithSeparators(testing *testing.T) {
 	// dim with single-char-cells = 2x2
 	// without any separators
 	w, h := t.RuneDim()
-	AssertEqual(testing, w, 2)
-	AssertEqual(testing, h, 2)
+	assert.Equal(testing, w, 2)
+	assert.Equal(testing, h, 2)
 
 	// with all borders
 	t.borderConfig = AllBorders
 	w, h = t.RuneDim()
-	AssertEqual(testing, w, 5)
-	AssertEqual(testing, h, 5)
+	assert.Equal(testing, w, 5)
+	assert.Equal(testing, h, 5)
 }
 func TestGesamt(testing *testing.T) {
-	var w, h int
 	t := NewTable(2, 3, NoBorders)
 	t.Append("c0")
 	t.Append("c1")
 	t.Append("c2")
-	// t.Append("")
+	t.Append("c3")
+	w, h := t.RuneDim()
 
-	AssertEqual(testing, t.GetAt(0, 0).String(), "c0")
-	AssertEqual(testing, t.GetAt(1, 0).String(), "c1")
-	AssertEqual(testing, t.GetAt(0, 1).String(), "c2")
-	AssertEqual(testing, t.GetAt(1, 1), nil)
+	// println(t.String())
+	/*
+	   c0c1
+	   c2c3
+	*/
+	assert.Equal(testing, t.GetAt(0, 0).String(), "c0")
+	assert.Equal(testing, t.GetAt(1, 0).String(), "c1")
+	assert.Equal(testing, t.GetAt(0, 1).String(), "c2")
+	assert.Equal(testing, t.GetAt(1, 1).String(), "c3")
 
-	AssertEqual(testing, t.RuneAt(0, 0), 'c')
-	AssertEqual(testing, t.RuneAt(1, 0), '0')
-	AssertEqual(testing, t.RuneAt(2, 0), 'c')
-	AssertEqual(testing, t.RuneAt(3, 0), '1')
+	assert.Equal(testing, t.RuneAt(0, 0, w, h), 'c')
+	assert.Equal(testing, t.RuneAt(1, 0, w, h), '0')
+	assert.Equal(testing, t.RuneAt(2, 0, w, h), 'c')
+	assert.Equal(testing, t.RuneAt(3, 0, w, h), '1')
 
-	AssertEqual(testing, t.RuneAt(0, 1), 'c')
-	AssertEqual(testing, t.RuneAt(1, 1), '2')
-	AssertEqual(testing, t.RuneAt(2, 1), ' ')
-	AssertEqual(testing, t.RuneAt(3, 1), ' ')
+	assert.Equal(testing, t.RuneAt(0, 1, w, h), 'c')
+	assert.Equal(testing, t.RuneAt(1, 1, w, h), '2')
+	assert.Equal(testing, t.RuneAt(2, 1, w, h), 'c')
+	assert.Equal(testing, t.RuneAt(3, 1, w, h), '3')
 
 	sb := strings.Builder{}
 	t.WriteTo(&sb)
-	AssertEqual(testing, sb.String(), "c0c1\nc2  ")
+	assert.Equal(testing, sb.String(), "c0c1\nc2c3")
 
 	// Change cells
 	t.ReplaceAt(0, 0, "A")
 	t.ReplaceAt(1, 0, "B")
 	t.ReplaceAt(0, 1, "C")
-	// t.ReplaceAt(1, 1, "D")
-	AssertEqual(testing, t.GetAt(0, 0).String(), "A")
-	AssertEqual(testing, t.GetAt(1, 0).String(), "B")
-	AssertEqual(testing, t.GetAt(0, 1).String(), "C")
-	// AssertEqual(testing, t.GetAt(1, 1).String(), "D")
+	t.ReplaceAt(1, 1, "D")
+	assert.Equal(testing, t.GetAt(0, 0).String(), "A")
+	assert.Equal(testing, t.GetAt(1, 0).String(), "B")
+	assert.Equal(testing, t.GetAt(0, 1).String(), "C")
+	assert.Equal(testing, t.GetAt(1, 1).String(), "D")
 	w, h = t.RuneDim()
-	AssertEqual(testing, w, 2)
-	AssertEqual(testing, h, 2)
-	AssertEqual(testing, t.String(), "AB\nC ")
+	assert.Equal(testing, w, 2)
+	assert.Equal(testing, h, 2)
+	assert.Equal(testing, t.String(), "AB\nCD")
 
 	// Changes of Dim by setting separators
 	// t.SetColSep(0, SINGLE)
 	// w, h = t.RuneDim()
-	// AssertEqual(testing, w, 5)
-	// AssertEqual(testing, h, 2)
-	// AssertEqual(testing, t.String(), "|AB\n|CD")
+	// assert.Equal(testing, w, 5)
+	// assert.Equal(testing, h, 2)
+	// assert.Equal(testing, t.String(), "|AB\n|CD")
 
 	// t.SetColSep(1, SINGLE)
 	// w, h = t.RuneDim()
-	// AssertEqual(testing, w, 6)
-	// AssertEqual(testing, h, 2)
-	// AssertEqual(testing, t.String(), "|A|B\n|C|D")
+	// assert.Equal(testing, w, 6)
+	// assert.Equal(testing, h, 2)
+	// assert.Equal(testing, t.String(), "|A|B\n|C|D")
 
 	// t.SetColSep(2, SINGLE)
 	// w, h = t.RuneDim()
-	// AssertEqual(testing, w, 7)
-	// AssertEqual(testing, h, 2)
-	// AssertEqual(testing, t.String(), "|A|B|\n|C|D|")
+	// assert.Equal(testing, w, 7)
+	// assert.Equal(testing, h, 2)
+	// assert.Equal(testing, t.String(), "|A|B|\n|C|D|")
 
 	// t.SetRowSep(0, SINGLE)
 	// w, h = t.RuneDim()
-	// AssertEqual(testing, w, 7)
-	// AssertEqual(testing, h, 3)
-	// AssertEqual(testing, t.String(), "-----\n|A|B|\n|C|D|")
+	// assert.Equal(testing, w, 7)
+	// assert.Equal(testing, h, 3)
+	// assert.Equal(testing, t.String(), "-----\n|A|B|\n|C|D|")
 
 	// t.SetRowSep(1, SINGLE)
 	// w, h = t.RuneDim()
-	// AssertEqual(testing, w, 7)
-	// AssertEqual(testing, h, 4)
-	// AssertEqual(testing, t.String(), "-----\n|A|B|\n-----\n|C|D|")
+	// assert.Equal(testing, w, 7)
+	// assert.Equal(testing, h, 4)
+	// assert.Equal(testing, t.String(), "-----\n|A|B|\n-----\n|C|D|")
 
 	// t.SetRowSep(3, SINGLE)
 	// w, h = t.RuneDim()
-	// AssertEqual(testing, w, 7)
-	// AssertEqual(testing, h, 5)
-	// AssertEqual(testing, t.String(), "-----\n|A|B|\n-----\n|C|D|\n\n-----")
+	// assert.Equal(testing, w, 7)
+	// assert.Equal(testing, h, 5)
+	// assert.Equal(testing, t.String(), "-----\n|A|B|\n-----\n|C|D|\n\n-----")
 
 	// // remove all separators, H&V
 	// t.SetColSep(0, 0).SetColSep(1, 0).SetColSep(2, 0).SetRowSep(0, 0).SetRowSep(1, 0).SetRowSep(2, 0)
 	// w, h = t.RuneDim()
-	// AssertEqual(testing, w, 4)
-	// AssertEqual(testing, h, 2)
-	// AssertEqual(testing, t.String(), "AB\nCD")
+	// assert.Equal(testing, w, 4)
+	// assert.Equal(testing, h, 2)
+	// assert.Equal(testing, t.String(), "AB\nCD")
 
 }

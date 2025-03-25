@@ -9,9 +9,9 @@ import (
 
 func run() {
 	t4 := NewTable(3, 2, AllBorders)
-	t4.Append("LEFT").SetAlignment(LEFT)
-	t4.Append("CENTER").SetAlignment(CENTER)
-	t4.Append("RIGHT___________________").SetAlignment(RIGHT)
+	t4.Append("________LEFT________").SetAlignment(LEFT)
+	t4.Append("________CENTER________").SetAlignment(CENTER)
+	t4.Append("________RIGHT________").SetAlignment(RIGHT)
 
 	// evtl. TODO: BorderConfig ändern damit einzelne Col/Row-Separators gesetzte werden können
 	//t4.AppendSeparatorsTillEndOfRow()

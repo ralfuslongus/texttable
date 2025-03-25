@@ -115,7 +115,7 @@ func IntToString(num int) string {
 func (c *Cell) RuneDim() (width, height int) {
 	return c.W, c.H
 }
-func (c *Cell) RuneAt(x, y int) rune {
+func (c *Cell) RuneAt(x, y, w, h int) rune {
 	// out of range
 	if y < 0 || y >= c.H {
 
@@ -130,9 +130,9 @@ func (c *Cell) RuneAt(x, y int) rune {
 	case LEFT:
 		alignOffset = 0
 	case CENTER:
-		alignOffset = (c.W - len(line)) / 2
+		alignOffset = (w - len(line)) / 2
 	case RIGHT:
-		alignOffset = c.W - len(line)
+		alignOffset = w - len(line)
 	default:
 		alignOffset = 0
 	}

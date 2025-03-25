@@ -163,16 +163,16 @@ func (t *Table) CalcWidthsAndHeights() ([]int, []int) {
 	return widths, heights
 }
 
-func (t *Table) SmoothedRuneAt(x, y int) rune {
-	r0 := t.RuneAt(x, y)
+func (t *Table) SmoothedRuneAt(x, y, w, h int) rune {
+	r0 := t.RuneAt(x, y, w, h)
 	b0 := IsBorderRune(r0)
 	if !b0 {
 		return r0
 	} else {
-		rAbove := t.RuneAt(x, y-1)
-		rRight := t.RuneAt(x+1, y)
-		rBelow := t.RuneAt(x, y+1)
-		rLeft := t.RuneAt(x-1, y)
+		rAbove := t.RuneAt(x, y-1, w, h)
+		rRight := t.RuneAt(x+1, y, w, h)
+		rBelow := t.RuneAt(x, y+1, w, h)
+		rLeft := t.RuneAt(x-1, y, w, h)
 		bAbove := IsBorderRune(rAbove)
 		bRight := IsBorderRune(rRight)
 		bBelow := IsBorderRune(rBelow)
@@ -223,7 +223,7 @@ func (t *Table) SmoothedRuneAt(x, y int) rune {
 // ├─┼─┼─┤
 // │F│t│r│
 // └─┴─┴─┘
-func (t *Table) RuneAt(x, y int) rune {
+func (t *Table) RuneAt(x, y, w, h int) rune {
 	/*
 		Was muss ich wissen:
 		Wie breit sind alle Spalten
@@ -241,7 +241,7 @@ func (t *Table) RuneAt(x, y int) rune {
 		1.) Breite aller Spalten, wo in welchem Rahmen, in welcher Spalte, relative Cell-X-Position
 		2.) Höhe aller Zeilen, wo in welchem Rahmen, in welcher Zeile, relative Cell-Y-Position
 	*/
-	w, h := t.CachedRuneDim()
+	// w, h := t.CachedRuneDim()
 	if x < 0 || y < 0 || x >= w || y >= h {
 		// out of range
 		return ' '
@@ -249,6 +249,7 @@ func (t *Table) RuneAt(x, y int) rune {
 	cx := 0 // calculated-x, zum durchgehen durch die Zeile bis ich die richtige Spalte oder Separator gefunden habe
 	dx := 0 // delta-x, relativ zur Zelle
 	var selectedCol = -1
+	var selectedColWidth = -1
 	var selectedColSep rune
 	widths, heights := t.GetCachedWidthsAndHeights()
 
@@ -267,12 +268,13 @@ ColLoop:
 		for dx = 0; dx < widths[col]; dx++ {
 			if cx == x {
 				selectedCol = col
+				selectedColWidth = widths[col]
 				break ColLoop
 			}
 			cx++
 		}
 	}
-	if selectedColSep == -0 && selectedCol == -1 {
+	if selectedColSep == 0 && selectedCol == -1 {
 		// sep dahinter?
 		sep := t.borderConfig.GetSeparatorLeftOf(t.columns, t.columns)
 		if sep != 0 {
@@ -284,6 +286,7 @@ ColLoop:
 	cy := 0 // calculated-y, zum durchgehen durch die Spalte bis ich die richtige Zeile oder Separator gefunden habe
 	dy := 0 // delta-y, relativ zur Zelle
 	var selectedRow = -1
+	var selectedRowHeight = -1
 	var selectedRowSep rune
 
 	rows := t.GetNumberOfUsedRows()
@@ -302,12 +305,13 @@ RowLoop:
 		for dy = 0; dy < heights[row]; dy++ {
 			if cy == y {
 				selectedRow = row
+				selectedRowHeight = heights[row]
 				break RowLoop
 			}
 			cy++
 		}
 	}
-	if selectedRowSep == -0 && selectedRow == -1 {
+	if selectedRowSep == 0 && selectedRow == -1 {
 		// sep dahinter?
 		sep := t.borderConfig.GetSeparatorAbove(rows, rows)
 		if sep != 0 {
@@ -328,7 +332,7 @@ RowLoop:
 		if cell == nil {
 			return ' '
 		} else {
-			r := cell.RuneAt(dx, dy)
+			r := cell.RuneAt(dx, dy, selectedColWidth, selectedRowHeight)
 			// println("selected: x/y", x, "/", y, "col/row", selectedCol, "/", selectedRow, "dx/dy:", dx, "/", dy, "rune:", string(r), "cell-string:", s)
 			return r
 		}
@@ -362,7 +366,7 @@ func (t *Table) WriteTo(writer io.Writer) (int, error) {
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
 			// r := t.RuneAt(x, y)
-			r := t.SmoothedRuneAt(x, y)
+			r := t.SmoothedRuneAt(x, y, w, h)
 			// fmt.Printf("RuneAt(%d/%d): %v\n", x, y, r)
 			i, err := writer.Write([]byte(string(r)))
 			bytesWritten += i
